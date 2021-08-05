@@ -1342,7 +1342,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "structopt",
- "sysinfo",
+ "sysinfo 0.20.0",
  "tar",
  "thiserror",
  "ureq",
@@ -4992,6 +4992,20 @@ dependencies = [
  "libc",
  "ntapi",
  "once_cell",
+ "winapi",
+]
+
+[[package]]
+name = "sysinfo"
+version = "0.20.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0af066e6272f2175c1783cfc2ebf3e2d8dfe2c182b00677fdeccbf8291af83fb"
+dependencies = [
+ "cfg-if 1.0.0",
+ "core-foundation-sys",
+ "libc",
+ "ntapi",
+ "once_cell",
  "rayon",
  "winapi",
 ]
@@ -5758,7 +5772,7 @@ dependencies = [
  "git2",
  "rustc_version 0.4.0",
  "rustversion",
- "sysinfo",
+ "sysinfo 0.19.2",
  "thiserror",
 ]
 
