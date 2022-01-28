@@ -59,18 +59,14 @@ impl SledTree {
         db: &sled::Db,
         tree_name: N,
         sync: bool,
-    ) -> common_exception::Result<Self> {
+    ) -> Result<Self, sled::Error> {
         // During testing, every tree name must be unique.
         if cfg!(test) {
             let x = tree_name.as_ref();
             let x = &x[0..5];
             assert_eq!(x, b"test-");
         }
-        let t = db
-            .open_tree(&tree_name)
-            .map_err_to_code(ErrorCode::MetaStoreDamaged, || {
-                format!("open tree: {}", tree_name)
-            })?;
+        let t = db.open_tree(&tree_name)?;
 
         tracing::debug!("SledTree opened tree: {}", tree_name);
 
