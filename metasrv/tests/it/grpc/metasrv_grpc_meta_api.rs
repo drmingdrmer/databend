@@ -15,11 +15,74 @@
 //! Test metasrv MetaApi on a single node.
 
 use common_base::tokio;
+use common_exception::ErrorCode;
+use common_meta_api::MetaApi;
 use common_meta_api::MetaApiTestSuite;
 use common_meta_grpc::MetaGrpcClient;
+use common_meta_types::CreateDatabaseReq;
+use common_meta_types::DatabaseMeta;
+use common_meta_types::DropDatabaseReq;
+use common_tracing::tracing;
+use common_tracing::tracing::Instrument;
 
 use crate::init_meta_ut;
 use crate::tests::start_metasrv;
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 10)]
+async fn test_meta_api_database_concurrent() -> anyhow::Result<()> {
+    let (_log_guards, ut_span) = init_meta_ut!();
+    let _ent = ut_span.enter();
+
+    let (_tc, addr) = start_metasrv().await?;
+
+    let mut handles = vec![];
+
+    for i in 0..10 {
+        let a = addr.clone();
+        let j = tokio::spawn(async move {
+            let client = MetaGrpcClient::try_create(a.as_str(), "root", "xxx", None, None).await?;
+
+            let tenant = "tenant1";
+
+            for n in 0..100 {
+                let req = DropDatabaseReq {
+                    if_exists: true,
+                    tenant: tenant.to_string(),
+                    db: "db1".to_string(),
+                };
+
+                let x = client.drop_database(req).await?;
+                tracing::debug!("=== {} {} drop: {:?}", i, n, x);
+
+                let req = CreateDatabaseReq {
+                    if_not_exists: true,
+                    tenant: tenant.to_string(),
+                    db: "db1".to_string(),
+                    meta: DatabaseMeta {
+                        engine: "github".to_string(),
+                        ..Default::default()
+                    },
+                };
+
+                let x = client.create_database(req).await?;
+                tracing::debug!("== {} {} create: {:?}", i, n, x);
+            }
+
+            Ok::<(), ErrorCode>(())
+        });
+
+        handles.push(j);
+    }
+
+    tracing::debug!("=== len: {}", handles.len());
+    for j in handles {
+        tracing::debug!("=== thread ---: {:?}", "start");
+        let x = j.await;
+        tracing::debug!("=== thread res: {:?}", x);
+    }
+
+    Ok(())
+}
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn test_meta_api_database_create_get_drop() -> anyhow::Result<()> {

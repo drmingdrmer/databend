@@ -15,6 +15,7 @@
 use common_base::tokio;
 use common_meta_api::MetaApiTestSuite;
 use common_meta_raft_store::state_machine::StateMachine;
+use common_tracing::tracing::Instrument;
 
 use crate::testing::new_raft_test_context;
 
