@@ -24,6 +24,7 @@ use common_meta_api::SchemaApi;
 use common_meta_app::schema::CreateDatabaseReq;
 use common_meta_app::schema::CreateTableReq;
 use common_meta_app::schema::DatabaseNameIdent;
+use common_meta_app::schema::DropTableReq;
 use common_meta_app::schema::GetTableReq;
 use common_meta_app::schema::TableNameIdent;
 use common_meta_app::schema::UpsertTableOptionReq;
@@ -87,6 +88,8 @@ async fn main() {
                     benchmark_upsert(&client, client_num, i).await;
                 } else if typ == "table" {
                     benchmark_table(&client, client_num, i).await;
+                } else if typ == "get_table" {
+                    benchmark_get_table(&client, client_num, i).await;
                 } else {
                     unreachable!("Invalid config.rpc: {}", typ);
                 }
@@ -120,27 +123,31 @@ async fn benchmark_upsert(client: &Arc<ClientHandle>, client_num: u32, i: u32) {
 }
 
 async fn benchmark_table(client: &Arc<ClientHandle>, client_num: u32, i: u32) {
+    let db_name_ident = DatabaseNameIdent {
+        tenant: format!("tenant-{}", client_num),
+        db_name: format!("db-{}", client_num),
+    };
+
     let res = client
         .create_database(CreateDatabaseReq {
             if_not_exists: false,
-            name_ident: DatabaseNameIdent {
-                tenant: format!("tenant-{}", client_num),
-                db_name: format!("db-{}", client_num),
-            },
+            name_ident: db_name_ident.clone(),
             meta: Default::default(),
         })
         .await;
 
     print_res(i, "create_db", &res);
 
+    let tb_name_ident = TableNameIdent {
+        tenant: format!("tenant-{}", client_num),
+        db_name: format!("db-{}", client_num),
+        table_name: format!("table-{}", client_num),
+    };
+
     let res = client
         .create_table(CreateTableReq {
             if_not_exists: true,
-            name_ident: TableNameIdent {
-                tenant: format!("tenant-{}", client_num),
-                db_name: format!("db-{}", client_num),
-                table_name: format!("table-{}", client_num),
-            },
+            name_ident: tb_name_ident.clone(),
             table_meta: Default::default(),
         })
         .await;
@@ -168,10 +175,41 @@ async fn benchmark_table(client: &Arc<ClientHandle>, client_num: u32, i: u32) {
         .await;
 
     print_res(i, "upsert_table_option", &res);
+
+    let res = client
+        .drop_table(DropTableReq {
+            if_exists: false,
+            name_ident: tb_name_ident.clone(),
+        })
+        .await;
+
+    print_res(i, "drop_table", &res);
+
+    let res = client
+        .create_table(CreateTableReq {
+            if_not_exists: true,
+            name_ident: tb_name_ident.clone(),
+            table_meta: Default::default(),
+        })
+        .await;
+
+    print_res(i, "create_table again", &res);
+}
+
+async fn benchmark_get_table(client: &Arc<ClientHandle>, client_num: u32, i: u32) {
+    let res = client
+        .get_table(GetTableReq::new(
+            format!("tenant-{}", client_num),
+            format!("db-{}", client_num),
+            format!("table-{}", client_num),
+        ))
+        .await;
+
+    print_res(i, "get_table", &res);
 }
 
 fn print_res<D: Debug>(i: u32, typ: impl Display, res: &D) {
-    if i % 100 == 0 {
-        println!("{:>10}-th {} result: {:?}", i, typ, res);
-    }
+    // if i % 100 == 0 {
+    println!("{:>10}-th {} result: {:?}", i, typ, res);
+    // }
 }

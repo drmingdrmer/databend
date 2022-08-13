@@ -113,6 +113,8 @@ impl SledTree {
     ) -> Result<T, MetaStorageError> {
         let sync = sync && self.sync;
 
+        assert!(sync);
+
         let result: TransactionResult<T, MetaStorageError> = self.tree.transaction(move |tree| {
             let txn_sled_tree = TransactionSledTree { txn_tree: tree };
             let r = f(txn_sled_tree.clone());
