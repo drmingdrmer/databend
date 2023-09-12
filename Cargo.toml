@@ -124,6 +124,7 @@ openraft = { git = "https://github.com/drmingdrmer/openraft", tag = "v0.8.4-alph
     "compat-07",
     "tracing-log",
 ] }
+rotbl = { git = "https://github.com/drmingdrmer/rotbl", tag = "v0.1.1" }
 
 # type helper
 derive_more = "0.99.17"

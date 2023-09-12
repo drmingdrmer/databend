@@ -46,7 +46,7 @@ use crate::state_machine::StateMachineMetaKey;
 pub const TREE_HEADER: &str = "header";
 
 /// The working data version the program runs on
-pub static DATA_VERSION: DataVersion = DataVersion::V002;
+pub static DATA_VERSION: DataVersion = DataVersion::V003;
 
 /// On disk data descriptor.
 ///
@@ -176,6 +176,9 @@ impl OnDisk {
                         self.finish_upgrading().await?;
                     }
                 }
+                DataVersion::V003 => {
+                    todo!()
+                }
             }
 
             self.header.upgrading = None;
@@ -192,6 +195,9 @@ impl OnDisk {
                     self.upgrade_v001_to_v002().await?;
                 }
                 DataVersion::V002 => {
+                    self.upgrade_v002_to_v003().await?;
+                }
+                DataVersion::V003 => {
                     unreachable!("{} is the latest version", self.header.version)
                 }
             }
@@ -281,6 +287,42 @@ impl OnDisk {
         self.finish_upgrading().await?;
 
         Ok(())
+    }
+
+    // TODO: update doc
+    /// Upgrade the on-disk data form [`DataVersion::V001`] to [`DataVersion::V002`].
+    ///
+    /// `V001` data is only openraft-v8 compatible.
+    /// `V002` saves snapshot in a file instead of in sled db.
+    ///
+    /// Upgrade will be skipped if:
+    /// - there is no state machine sled tree.
+    ///
+    /// Steps:
+    /// - Build a V002 snapshot from V001 state machine sled tree.
+    /// - Remove the state machine sled trees.
+    #[minitrace::trace]
+    async fn upgrade_v002_to_v003(&mut self) -> Result<(), MetaStorageError> {
+        todo!()
+
+        // self.begin_upgrading(DataVersion::V001).await?;
+        //
+        // let sm_tree_name = if let Some(n) = self.v001_read_state_machine_tree_name().await? {
+        //     n
+        // } else {
+        //     self.progress(format_args!("No state machine tree, skip upgrade"));
+        //     self.finish_upgrading().await?;
+        //     return Ok(());
+        // };
+        //
+        // self.v001_dump_state_machine_to_v002_snapshot(&sm_tree_name)
+        //     .await?;
+        //
+        // self.v001_remove_all_state_machine_trees().await?;
+        //
+        // self.finish_upgrading().await?;
+        //
+        // Ok(())
     }
 
     async fn v001_read_state_machine_tree_name(

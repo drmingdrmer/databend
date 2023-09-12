@@ -12,21 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![allow(clippy::uninlined_format_args)]
-#![feature(impl_trait_in_assoc_type)]
-// #![feature(type_alias_impl_trait)]
+pub mod leveled_store;
+pub(in crate::sm_v003) mod marked;
+#[allow(clippy::module_inception)]
+mod sm_v003;
+mod snapshot_store;
+mod snapshot_view_v003;
+mod writer_v003;
 
-// #![allow(incomplete_features)]
-// #![feature(return_position_impl_trait_in_trait)]
+mod importer;
 
-pub mod applier;
-pub mod applier_v003;
-pub(crate) mod compat07;
-pub mod config;
-pub mod key_spaces;
-pub mod log;
-pub mod ondisk;
-pub mod sm_v002;
-pub mod sm_v003;
-pub mod state;
-pub mod state_machine;
+#[cfg(test)]
+mod sm_v003_test;
+#[cfg(test)]
+mod snapshot_view_v003_test;
+
+pub use importer::Importer;
+pub use sm_v003::SMV003;
+pub use snapshot_store::SnapshotStoreError;
+pub use snapshot_store::SnapshotStoreV003;
+pub use snapshot_view_v003::SnapshotViewV003;
+pub use writer_v003::WriterV003;

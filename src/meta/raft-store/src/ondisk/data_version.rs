@@ -34,6 +34,9 @@ pub enum DataVersion {
 
     /// Store snapshot in a file.
     V002,
+
+    /// Bottom level of SM is on-disk file.
+    V003,
 }
 
 impl fmt::Debug for DataVersion {
@@ -48,6 +51,7 @@ impl fmt::Debug for DataVersion {
                 "V001(2023-05-15: Get rid of compat, use only openraft v08 data types)"
             ),
             Self::V002 => write!(f, "V002(2023-07-22: Store snapshot in a file)"),
+            Self::V003 => write!(f, "V003(2023-09-11: Snapshot as bottom level of SM)"),
         }
     }
 }
@@ -58,6 +62,7 @@ impl fmt::Display for DataVersion {
             Self::V0 => write!(f, "V0"),
             Self::V001 => write!(f, "V001"),
             Self::V002 => write!(f, "V002"),
+            Self::V003 => write!(f, "V003"),
         }
     }
 }
@@ -68,7 +73,8 @@ impl DataVersion {
         match self {
             Self::V0 => Some(Self::V001),
             Self::V001 => Some(Self::V002),
-            Self::V002 => None,
+            Self::V002 => Some(Self::V003),
+            Self::V003 => None,
         }
     }
 
@@ -83,6 +89,7 @@ impl DataVersion {
             Self::V0 => Self::V0,
             Self::V001 => Self::V0,
             Self::V002 => Self::V0,
+            Self::V003 => Self::V0,
         }
     }
 

@@ -12,21 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![allow(clippy::uninlined_format_args)]
-#![feature(impl_trait_in_assoc_type)]
-// #![feature(type_alias_impl_trait)]
+use std::collections::BTreeMap;
 
-// #![allow(incomplete_features)]
-// #![feature(return_position_impl_trait_in_trait)]
+use common_meta_types::LogId;
+use common_meta_types::Node;
+use common_meta_types::NodeId;
+use common_meta_types::StoredMembership;
 
-pub mod applier;
-pub mod applier_v003;
-pub(crate) mod compat07;
-pub mod config;
-pub mod key_spaces;
-pub mod log;
-pub mod ondisk;
-pub mod sm_v002;
-pub mod sm_v003;
-pub mod state;
-pub mod state_machine;
+/// APIs to access the non-user-data of the state machine(leveled map).
+pub(in crate::sm_v003) trait SysDataApiRO {
+    fn curr_seq(&self) -> u64;
+
+    fn last_applied_ref(&self) -> &Option<LogId>;
+
+    fn last_membership_ref(&self) -> &StoredMembership;
+
+    fn nodes_ref(&self) -> &BTreeMap<NodeId, Node>;
+}

@@ -92,9 +92,18 @@ impl VersionInfo {
         )
     }
 
-    // TODO: enable this when V002 is merged.
-    #[allow(dead_code)]
     const fn v002() -> Self {
+        Self::new(
+            "3694e259c8e7c227fadfac5faa881cd2f2af6bbe",
+            "2023-08-08",
+            new_semver(1, 2, 53),
+            "Store snapshot in a file",
+        )
+    }
+
+    // TODO: enable this when V003 is merged.
+    #[allow(dead_code)]
+    const fn v003() -> Self {
         Self::new("", "2023-xx-xx", new_semver(0, 0, 0), "TODO")
     }
 }
@@ -106,8 +115,9 @@ lazy_static::lazy_static! {
         btreemap! {
             DataVersion::V0 => VersionInfo::v0(),
             DataVersion::V001 => VersionInfo::v001() ,
-            // TODO: enable this when V002 is merged.
-            // DataVersion::V002 => VersionInfo::v002() ,
+            DataVersion::V002 => VersionInfo::v002() ,
+            // TODO: enable this when V003 is merged.
+            // DataVersion::V003 => VersionInfo::v003() ,
         }
 
     };
