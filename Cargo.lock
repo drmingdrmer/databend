@@ -2168,6 +2168,7 @@ dependencies = [
  "common-storage",
  "mockall",
  "serde_json",
+ "tracing",
 ]
 
 [[package]]
