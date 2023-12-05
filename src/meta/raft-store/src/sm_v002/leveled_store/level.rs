@@ -17,6 +17,9 @@ use std::collections::BTreeMap;
 use std::io;
 use std::ops::RangeBounds;
 
+use common_meta_types::txn::TxnBufferValue;
+use common_meta_types::txn::TxnId;
+use common_meta_types::txn::TxnMeta;
 use common_meta_types::KVMeta;
 use futures_util::StreamExt;
 
@@ -52,6 +55,16 @@ pub struct Level {
 
     /// The expiration queue of generic kv.
     pub(in crate::sm_v002) expire: BTreeMap<ExpireKey, Marked<String>>,
+
+    // TODO: export
+    // TODO: install snaphot
+    // TODO: import
+    /// Transaction meta data, indexed by transaction id.
+    /// By removing txn meta, the transaction buffer is considered removed.
+    pub(in crate::sm_v002) txn_meta: BTreeMap<TxnId, Marked<TxnMeta>>,
+
+    /// Buffer to store all transaction operations.
+    pub(in crate::sm_v002) txn_buffer: BTreeMap<(TxnId, u64), Marked<TxnBufferValue>>,
 }
 
 impl Level {

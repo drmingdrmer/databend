@@ -26,6 +26,7 @@ use common_meta_types::MetaAPIError;
 use common_meta_types::MetaNetworkError;
 use common_meta_types::NodeId;
 use log::debug;
+use log::info;
 use tonic::codegen::BoxStream;
 use tonic::transport::Channel;
 
@@ -87,7 +88,7 @@ impl<'a> Forwarder<ForwardRequestBody> for MetaForwarder<'a> {
         target: NodeId,
         req: ForwardRequest<ForwardRequestBody>,
     ) -> Result<ForwardResponse, ForwardRPCError> {
-        debug!("forward ForwardRequest to: {} {:?}", target, req);
+        info!("forward ForwardRequest to: {} {:?}", target, req);
 
         let (endpoint, mut client) = self.new_raft_client(&target).await?;
 
@@ -111,7 +112,7 @@ impl<'a> Forwarder<MetaGrpcReadReq> for MetaForwarder<'a> {
         target: NodeId,
         req: ForwardRequest<MetaGrpcReadReq>,
     ) -> Result<BoxStream<StreamItem>, ForwardRPCError> {
-        debug!("forward ReadRequest to: {} {:?}", target, req);
+        info!("forward ReadRequest to: {} {:?}", target, req);
 
         let (endpoint, mut client) = self.new_raft_client(&target).await?;
 

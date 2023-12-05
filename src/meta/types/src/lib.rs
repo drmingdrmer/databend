@@ -36,6 +36,7 @@ mod raft_types;
 mod seq_errors;
 mod seq_num;
 mod seq_value;
+pub mod txn;
 mod with;
 
 mod proto_display;

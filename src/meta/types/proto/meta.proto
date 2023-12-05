@@ -145,6 +145,33 @@ message TxnReply {
   string error = 3;
 }
 
+// Item of a transaction request stream.
+message TxnRequestItem {
+  // The payload is either a condition to assert before executing the transaction,
+  // or an operation to execute when all conditions are met, or an operation to execute when not all conditions are met.
+  oneof txn_request_payload {
+    TxnCondition condition = 11;
+    TxnOp        then_op   = 12;
+    TxnOp        else_op   = 13;
+  }
+}
+
+// Item of a transaction reply stream.
+message TxnReplyItem {
+  // The payload is either a header of the transaction reply, or a response to an operation.
+  oneof txn_reply_payload {
+    TxnReplyHeader header   = 11;
+    TxnOpResponse  response = 12;
+  }
+}
+
+//
+message TxnReplyHeader {
+  bool   success = 11;
+  string error   = 12;
+}
+
+
 message ClusterStatus {
   uint64 id = 1;
   string binary_version = 2;
