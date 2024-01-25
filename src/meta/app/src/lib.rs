@@ -37,3 +37,6 @@ pub mod id_generator;
 
 mod key_with_tenant;
 pub use key_with_tenant::KeyWithTenant;
+mod keys;
+
+pub use keys::AppKey;
