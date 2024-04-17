@@ -309,6 +309,8 @@ pub enum Statement {
     DropTask(DropTaskStmt),
     ShowTasks(ShowTasksStmt),
 
+    CreateDynamicTable(CreateDynamicTableStmt),
+
     // pipes
     CreatePipe(CreatePipeStmt),
     DescribePipe(DescribePipeStmt),
@@ -719,8 +721,8 @@ impl Display for Statement {
             Statement::AlterNotification(stmt) => write!(f, "{stmt}")?,
             Statement::DropNotification(stmt) => write!(f, "{stmt}")?,
             Statement::DescribeNotification(stmt) => write!(f, "{stmt}")?,
-
             Statement::ExecuteImmediate(stmt) => write!(f, "{stmt}")?,
+            Statement::CreateDynamicTable(stmt) => write!(f, "{stmt}")?,
         }
         Ok(())
     }

@@ -522,10 +522,14 @@ pub enum TokenKind {
     DOY,
     #[token("DOWNLOAD", ignore(ascii_case))]
     DOWNLOAD,
+    #[token("DOWNSTREAM", ignore(ascii_case))]
+    DOWNSTREAM,
     #[token("DROP", ignore(ascii_case))]
     DROP,
     #[token("DRY", ignore(ascii_case))]
     DRY,
+    #[token("DYNAMIC", ignore(ascii_case))]
+    DYNAMIC,
     #[token("EXCEPT", ignore(ascii_case))]
     EXCEPT,
     #[token("EXCLUDE", ignore(ascii_case))]
@@ -1027,6 +1031,8 @@ pub enum TokenKind {
     TABLE,
     #[token("TABLES", ignore(ascii_case))]
     TABLES,
+    #[token("TARGET_LAG", ignore(ascii_case))]
+    TARGET_LAG,
     #[token("TEXT", ignore(ascii_case))]
     TEXT,
     #[token("LONGTEXT", ignore(ascii_case))]

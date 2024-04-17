@@ -12,23 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod account;
-mod catalog;
-mod column;
-mod connection;
-mod data_mask;
-mod database;
-mod dynamic_table;
-mod index;
-mod network_policy;
-mod notification;
-mod password_policy;
-mod procedure;
-mod role;
-mod share;
-mod stage;
-mod stream;
-mod table;
-mod task;
-mod view;
-mod virtual_column;
+pub const OPT_KEY_AS_QUERY: &str = "as_query";
+pub const OPT_KEY_TARGET_LAG: &str = "target_lag";

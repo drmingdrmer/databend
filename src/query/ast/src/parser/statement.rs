@@ -212,6 +212,49 @@ pub fn statement_body(i: Input) -> IResult<Statement> {
         },
     );
 
+    let create_dynamic = map_res(
+        rule! {
+            CREATE ~ ( OR ~ ^REPLACE )? ~ TRANSIENT? ~ DYNAMIC ~ TABLE ~ ( IF ~ ^NOT ~ ^EXISTS )?
+            ~ #dot_separated_idents_1_to_3
+            ~ #create_table_source?
+            ~ ( CLUSTER ~ ^BY ~ ^"(" ~ ^#comma_separated_list1(expr) ~ ^")" )?
+            ~ (TARGET_LAG ~ "=" ~ #target_lag)
+            ~ ( #table_option )?
+            ~ (AS ~ ^#query)
+        },
+        |(
+            _,
+            opt_or_replace,
+            opt_transient,
+            _,
+            _,
+            opt_if_not_exists,
+            (catalog, database, table),
+            source,
+            opt_cluster_by,
+            (_, _, target_lag),
+            opt_table_options,
+            (_, query),
+        )| {
+            let create_option =
+                parse_create_option(opt_or_replace.is_some(), opt_if_not_exists.is_some())?;
+            Ok(Statement::CreateDynamicTable(CreateDynamicTableStmt {
+                create_option,
+                transient: opt_transient.is_some(),
+                catalog,
+                database,
+                table,
+                source,
+                cluster_by: opt_cluster_by
+                    .map(|(_, _, _, exprs, _)| exprs)
+                    .unwrap_or_default(),
+                target_lag,
+                table_options: opt_table_options.unwrap_or_default(),
+                as_query: Box::new(query),
+            }))
+        },
+    );
+
     let merge = map(
         rule! {
             MERGE ~ #hint?
@@ -2195,7 +2238,7 @@ pub fn statement_body(i: Input) -> IResult<Statement> {
         ),
         rule!(
             #create_task : "`CREATE TASK [ IF NOT EXISTS ] <name>
-  [ { WAREHOUSE = <string> }
+  [ { WAREHOUSE = <string> } ]
   [ SCHEDULE = { <num> MINUTE | USING CRON <expr> <time_zone> } ]
   [ AFTER <string>, <string>...]
   [ WHEN boolean_expr ]
@@ -2209,6 +2252,17 @@ AS
          | #show_tasks : "`SHOW TASKS [<show_limit>]`"
          | #desc_task : "`DESC | DESCRIBE TASK <name>`"
          | #execute_task: "`EXECUTE TASK <name>`"
+        ),
+        rule!(
+            #create_dynamic : "`CREATE [OR REPLACE] DYNAMIC TABLE [ IF NOT EXISTS ] [<database>.]<table> [<source>]
+  [ CLUSTER BY <expr> ]
+  TARGET_LAG = { '<num> { SECOND | MINUTE | HOUR | DAY }' }
+  [ { WAREHOUSE = <string> } ]
+  [ REFRESH_MODE = { AUTO | FULL | INCREMENTAL } ]
+  [ INITIALIZE = { ON_CREATE | ON_SCHEDULE } ]
+  [ COMMENT = '<string_literal>' ]
+AS
+  <sql>`"
         ),
         rule!(
             #create_pipe : "`CREATE PIPE [ IF NOT EXISTS ] <name>
@@ -3591,6 +3645,46 @@ pub fn task_schedule_option(i: Input) -> IResult<ScheduleOptions> {
         #interval
         | #cron_expr
         | #interval_sec
+    )(i)
+}
+
+pub fn target_lag(i: Input) -> IResult<TargetLag> {
+    let interval_sec = map(
+        rule! {
+             #literal_u64 ~ SECOND
+        },
+        |(secs, _)| TargetLag::IntervalSecs(secs),
+    );
+    let interval_min = map(
+        rule! {
+             #literal_u64 ~ MINUTE
+        },
+        |(mins, _)| TargetLag::IntervalSecs(mins * 60),
+    );
+    let interval_hour = map(
+        rule! {
+             #literal_u64 ~ HOUR
+        },
+        |(hours, _)| TargetLag::IntervalSecs(hours * 60 * 60),
+    );
+    let interval_day = map(
+        rule! {
+             #literal_u64 ~ DAY
+        },
+        |(days, _)| TargetLag::IntervalSecs(days * 60 * 60 * 24),
+    );
+    let downstream = map(
+        rule! {
+            DOWNSTREAM
+        },
+        |_| TargetLag::Downstream,
+    );
+    rule!(
+        #interval_sec
+        | #interval_min
+        | #interval_hour
+        | #interval_day
+        | #downstream
     )(i)
 }
 
