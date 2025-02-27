@@ -83,14 +83,13 @@ impl TempTblMgr {
         self.id_to_table.is_empty()
     }
 
-    pub fn create_table(&mut self, req: CreateTableReq) -> Result<CreateTableReply> {
+    pub fn create_table(&mut self, req: CreateTableReq, orphan: bool) -> Result<CreateTableReply> {
         let CreateTableReq {
             create_option,
             name_ident,
             table_meta,
-            as_dropped,
         } = req;
-        let orphan_table_name = as_dropped.then(|| format!("orphan@{}", name_ident.table_name));
+        let orphan_table_name = orphan.then(|| format!("orphan@{}", name_ident.table_name));
 
         let Some(db_id) = table_meta.options.get(OPT_KEY_DATABASE_ID) else {
             return Err(ErrorCode::Internal(format!(

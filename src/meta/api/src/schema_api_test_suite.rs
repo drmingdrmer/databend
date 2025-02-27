@@ -463,7 +463,6 @@ impl SchemaApiTestSuite {
             create_option: CreateOption::Create,
             name_ident: db_table_name_ident.clone(),
             table_meta: table_meta(created_on),
-            as_dropped: false,
         };
 
         {
@@ -1472,7 +1471,6 @@ impl SchemaApiTestSuite {
             },
 
             table_meta: table_meta(created_on),
-            as_dropped: false,
         };
         let resp = mt.create_table(req.clone()).await?;
         let table_id = resp.table_id;
@@ -1545,7 +1543,6 @@ impl SchemaApiTestSuite {
                 create_option: CreateOption::Create,
                 name_ident: name_ident.clone(),
                 table_meta: table_meta(created_on),
-                as_dropped: false,
             };
             let res = mt.create_table(req.clone()).await?;
             table_id = res.table_id;
@@ -1631,7 +1628,6 @@ impl SchemaApiTestSuite {
                 },
 
                 table_meta: table_meta(created_on),
-                as_dropped: false,
             };
             // test create table
             {
@@ -1687,7 +1683,6 @@ impl SchemaApiTestSuite {
                 table_name: tbl_name.to_string(),
             },
             table_meta: table_meta(created_on),
-            as_dropped: false,
         };
         let tb_ident_2 = {
             {
@@ -1781,7 +1776,6 @@ impl SchemaApiTestSuite {
                     table_name: "tb3".to_string(),
                 },
                 table_meta: table_meta(created_on),
-                as_dropped: false,
             };
 
             let old_db = mt.get_database(Self::req_get_db(&tenant, db_name)).await?;
@@ -1909,7 +1903,6 @@ impl SchemaApiTestSuite {
                     table_name: table.to_string(),
                 },
                 table_meta: table_meta(old_created_on),
-                as_dropped: false,
             };
 
             let res = mt.create_table(req.clone()).await?;
@@ -1938,7 +1931,6 @@ impl SchemaApiTestSuite {
                     table_name: table.to_string(),
                 },
                 table_meta: table_meta(created_on),
-                as_dropped: false,
             };
 
             let res = mt.create_table(req.clone()).await?;
@@ -1980,10 +1972,10 @@ impl SchemaApiTestSuite {
                     table_name: tbl_name.to_string(),
                 },
                 table_meta: tbl_meta,
-                as_dropped: true,
             };
             let old_db = mt.get_database(Self::req_get_db(&tenant, db_name)).await?;
-            let create_table_as_dropped_resp = mt.create_table(create_table_req.clone()).await?;
+            let create_table_as_dropped_resp =
+                mt.create_orphan_table(create_table_req.clone()).await?;
 
             // - verify that table created is invisible
             let req = GetTableReq::new(&tenant, db_name, tbl_name);
@@ -2028,8 +2020,9 @@ impl SchemaApiTestSuite {
                     req
                 };
 
-                let create_if_not_exist_resp =
-                    mt.create_table(create_table_if_not_exist_req).await?;
+                let create_if_not_exist_resp = mt
+                    .create_orphan_table(create_table_if_not_exist_req)
+                    .await?;
                 // no new table should be created
                 assert!(!create_if_not_exist_resp.new_table);
                 // the tabled id that returned should be the same
@@ -2051,8 +2044,9 @@ impl SchemaApiTestSuite {
                     req
                 };
 
-                let create_if_not_exist_resp =
-                    mt.create_table(create_table_if_not_exist_req).await?;
+                let create_if_not_exist_resp = mt
+                    .create_orphan_table(create_table_if_not_exist_req)
+                    .await?;
                 // new table should be created
                 assert!(create_if_not_exist_resp.new_table);
                 // table should not be visible
@@ -2307,7 +2301,6 @@ impl SchemaApiTestSuite {
                 table_name: tb2_name.to_string(),
             },
             table_meta: table_meta(created_on),
-            as_dropped: false,
         };
 
         info!("--- create table for rename");
@@ -2534,7 +2527,6 @@ impl SchemaApiTestSuite {
                     table_name: tbl_name.to_string(),
                 },
                 table_meta: table_meta(created_on),
-                as_dropped: false,
             };
 
             let _tb_ident_2 = {
@@ -2836,7 +2828,6 @@ impl SchemaApiTestSuite {
                     table_name: tbl_name_1.to_string(),
                 },
                 table_meta: table_meta(created_on),
-                as_dropped: false,
             };
             let _res = mt.create_table(req.clone()).await?;
 
@@ -2848,7 +2839,6 @@ impl SchemaApiTestSuite {
                     table_name: tbl_name_2.to_string(),
                 },
                 table_meta: table_meta(created_on),
-                as_dropped: false,
             };
             let _res = mt.create_table(req.clone()).await?;
         }
@@ -3187,7 +3177,6 @@ impl SchemaApiTestSuite {
                     table_name: tbl_name.to_string(),
                 },
                 table_meta: table_meta(created_on),
-                as_dropped: false,
             };
 
             let _tb_ident_2 = {
@@ -3521,7 +3510,6 @@ impl SchemaApiTestSuite {
             create_option: CreateOption::Create,
             name_ident,
             table_meta: create_table_meta.clone(),
-            as_dropped: false,
         };
 
         let res = mt.create_table(req).await?;
@@ -3757,7 +3745,6 @@ impl SchemaApiTestSuite {
             create_option: CreateOption::Create,
             name_ident: tbl_name_ident.clone(),
             table_meta: create_table_meta.clone(),
-            as_dropped: false,
         };
 
         let res = mt.create_table(req).await?;
@@ -3993,7 +3980,6 @@ impl SchemaApiTestSuite {
                 create_option: CreateOption::Create,
                 name_ident: tbl_name_ident.clone(),
                 table_meta: create_table_meta.clone(),
-                as_dropped: false,
             };
 
             let old_db = mt.get_database(Self::req_get_db(&tenant, db_name)).await?;
@@ -4082,7 +4068,6 @@ impl SchemaApiTestSuite {
                 create_option: CreateOption::Create,
                 name_ident: TableNameIdent::new(&tenant, "db1", "tb1"),
                 table_meta: table_meta(created_on),
-                as_dropped: false,
             };
             let resp = mt.create_table(req.clone()).await?;
             let db1_tb1_id = resp.table_id;
@@ -4134,7 +4119,6 @@ impl SchemaApiTestSuite {
                     create_option: CreateOption::Create,
                     name_ident: table_name.clone(),
                     table_meta: table_meta(created_on),
-                    as_dropped: false,
                 };
                 let resp = mt.create_table(req.clone()).await?;
                 drop_ids_boundary.push(DroppedId::new_table(
@@ -4167,7 +4151,6 @@ impl SchemaApiTestSuite {
                     create_option: CreateOption::Create,
                     name_ident: TableNameIdent::new(&tenant, "db2", "tb2"),
                     table_meta: table_meta.clone(),
-                    as_dropped: false,
                 };
                 let resp = mt.create_table(req.clone()).await?;
                 mt.drop_table_by_id(DropTableByIdReq {
@@ -4200,7 +4183,6 @@ impl SchemaApiTestSuite {
                     create_option: CreateOption::Create,
                     name_ident: TableNameIdent::new(&tenant, "db2", "tb3"),
                     table_meta: table_meta(created_on),
-                    as_dropped: false,
                 };
                 let resp = mt.create_table(req.clone()).await?;
                 db2_tb3_id = resp.table_id;
@@ -4239,7 +4221,6 @@ impl SchemaApiTestSuite {
                     create_option: CreateOption::Create,
                     name_ident: TableNameIdent::new(&tenant, "db3", "tb1"),
                     table_meta: table_meta(created_on),
-                    as_dropped: false,
                 };
                 let resp = mt.create_table(req.clone()).await?;
                 drop_ids_boundary.push(DroppedId::new_table(*db3_id, resp.table_id, "tb1"));
@@ -4263,7 +4244,6 @@ impl SchemaApiTestSuite {
                     create_option: CreateOption::Create,
                     name_ident: TableNameIdent::new(&tenant, "db3", "tb2"),
                     table_meta: table_meta.clone(),
-                    as_dropped: false,
                 };
                 let resp = mt.create_table(req.clone()).await?;
                 drop_ids_no_boundary.push(DroppedId::new_table(*db3_id, resp.table_id, "tb2"));
@@ -4290,7 +4270,6 @@ impl SchemaApiTestSuite {
                     create_option: CreateOption::Create,
                     name_ident: TableNameIdent::new(&tenant, "db3", "tb3"),
                     table_meta: table_meta(created_on),
-                    as_dropped: false,
                 };
                 let _resp = mt.create_table(req.clone()).await?;
             }
@@ -4430,7 +4409,6 @@ impl SchemaApiTestSuite {
                     },
 
                     table_meta: table_meta(created_on),
-                    as_dropped: false,
                 };
                 let resp = mt.create_table(req.clone()).await?;
 
@@ -4655,7 +4633,6 @@ impl SchemaApiTestSuite {
                 create_option: CreateOption::Create,
                 name_ident: tbl_name_ident.clone(),
                 table_meta: create_table_meta.clone(),
-                as_dropped: false,
             };
 
             let old_db = mt.get_database(Self::req_get_db(&tenant, db_name)).await?;
@@ -4757,7 +4734,6 @@ impl SchemaApiTestSuite {
                     create_option: CreateOption::Create,
                     name_ident: tbl_name_ident.clone(),
                     table_meta: create_table_meta.clone(),
-                    as_dropped: false,
                 })
                 .await?;
             let cur_db = mt.get_database(Self::req_get_db(&tenant, db_name)).await?;
@@ -4837,7 +4813,6 @@ impl SchemaApiTestSuite {
                 create_option: CreateOption::Create,
                 name_ident: new_tbl_name_ident.clone(),
                 table_meta: create_table_meta.clone(),
-                as_dropped: false,
             };
 
             let old_db = mt.get_database(Self::req_get_db(&tenant, db_name)).await?;
@@ -4988,10 +4963,9 @@ impl SchemaApiTestSuite {
                 table_name: tbl_name.to_string(),
             },
             table_meta: drop_table_meta(created_on),
-            as_dropped: true,
         };
 
-        let create_table_as_dropped_resp = mt.create_table(create_table_req.clone()).await?;
+        let create_table_as_dropped_resp = mt.create_orphan_table(create_table_req.clone()).await?;
 
         // commit table meta with a wrong prev_table_id will fail
         {
@@ -5072,7 +5046,6 @@ impl SchemaApiTestSuite {
                     table_name: tbl_name.to_string(),
                 },
                 table_meta: table_meta(created_on),
-                as_dropped: false,
             };
 
             let _ = mt.create_table(create_table_req.clone()).await?;
@@ -5104,10 +5077,9 @@ impl SchemaApiTestSuite {
                     table_name: tbl_name.to_string(),
                 },
                 table_meta: table_meta(created_on),
-                as_dropped: true,
             };
 
-            let resp = mt.create_table(create_table_req.clone()).await;
+            let resp = mt.create_orphan_table(create_table_req.clone()).await;
             assert!(matches!(
                 resp.unwrap_err(),
                 KVAppError::AppError(AppError::CreateAsDropTableWithoutDropTime(_))
@@ -5121,10 +5093,10 @@ impl SchemaApiTestSuite {
                     table_name: tbl_name.to_string(),
                 },
                 table_meta: drop_table_meta(created_on),
-                as_dropped: true,
             };
 
-            let create_table_as_dropped_resp = mt.create_table(create_table_req.clone()).await?;
+            let create_table_as_dropped_resp =
+                mt.create_orphan_table(create_table_req.clone()).await?;
 
             let commit_table_req = CommitTableMetaReq {
                 name_ident: create_table_req.name_ident.clone(),
@@ -5163,10 +5135,10 @@ impl SchemaApiTestSuite {
                     table_name: tbl_name.to_string(),
                 },
                 table_meta: drop_table_meta(created_on),
-                as_dropped: true,
             };
 
-            let create_table_as_dropped_resp = mt.create_table(create_table_req.clone()).await?;
+            let create_table_as_dropped_resp =
+                mt.create_orphan_table(create_table_req.clone()).await?;
 
             let key_table_id_list = TableIdHistoryIdent {
                 database_id: *db_id,
@@ -5268,7 +5240,6 @@ impl SchemaApiTestSuite {
                 table_name: tbl_name.to_string(),
             },
             table_meta: drop_table_meta(created_on),
-            as_dropped: true,
         };
 
         let concurrent_count: usize = 5;
@@ -5280,7 +5251,7 @@ impl SchemaApiTestSuite {
             let arc_mt = mt.clone();
 
             let handle = runtime.spawn(async move {
-                let resp = arc_mt.create_table(create_table_req.clone()).await;
+                let resp = arc_mt.create_orphan_table(create_table_req.clone()).await;
 
                 // assert that when create table concurrently with corret params return error,
                 // the error MUST be TxnRetryMaxTimes
@@ -5381,7 +5352,6 @@ impl SchemaApiTestSuite {
                     table_name: tbl_name.to_string(),
                 },
                 table_meta: table_meta(created_on),
-                as_dropped: false,
             };
 
             let _tb_ident_2 = {
@@ -5661,7 +5631,6 @@ impl SchemaApiTestSuite {
                 create_option: CreateOption::Create,
                 name_ident: tbl_name_ident.clone(),
                 table_meta: table_meta(created_on),
-                as_dropped: false,
             };
             let resp = mt.create_table(req.clone()).await?;
             table_id = resp.table_id;
@@ -5853,7 +5822,6 @@ impl SchemaApiTestSuite {
                     options: options.clone(),
                     ..Default::default()
                 },
-                as_dropped: false,
             };
 
             let tb_ids = {
@@ -5916,7 +5884,6 @@ impl SchemaApiTestSuite {
                         table_name,
                     },
                     table_meta: table_meta.clone(),
-                    as_dropped: false,
                 };
                 let resp = util.mt.create_table(req).await?;
 
@@ -5983,7 +5950,6 @@ impl SchemaApiTestSuite {
                     table_name: tbl_name.to_string(),
                 },
                 table_meta: table_meta(created_on),
-                as_dropped: false,
             };
             let resp = mt.create_table(req.clone()).await?;
             table_id = resp.table_id;
@@ -7381,7 +7347,6 @@ impl SchemaApiTestSuite {
                         options: options.clone(),
                         ..Default::default()
                     },
-                    as_dropped: false,
                 };
                 let old_db = node_a
                     .get_database(Self::req_get_db(&tenant, db_name))
@@ -7454,7 +7419,6 @@ impl SchemaApiTestSuite {
                     options: options.clone(),
                     ..Default::default()
                 },
-                as_dropped: false,
             };
 
             let old_db = node_a
@@ -7542,7 +7506,6 @@ impl SchemaApiTestSuite {
                 create_option: CreateOption::Create,
                 name_ident: tbl_name_ident.clone(),
                 table_meta: table_meta(created_on),
-                as_dropped: false,
             };
             let resp = mt.create_table(req.clone()).await?;
             table_id = resp.table_id;
@@ -8045,7 +8008,6 @@ where MT: SchemaApi + kvapi::AsKVApi<Error = MetaError>
                 table_name: self.tbl_name(),
             },
             table_meta: table_meta.clone(),
-            as_dropped: false,
         };
         let resp = self.mt.create_table(req.clone()).await?;
         let table_id = resp.table_id;

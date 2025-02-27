@@ -118,9 +118,8 @@ impl Interpreter for CreateViewInterpreter {
                 options,
                 ..Default::default()
             },
-            as_dropped: false,
         };
-        catalog.create_table(plan).await?;
+        catalog.create_table(plan, false).await?;
 
         Ok(PipelineBuildResult::create())
     }

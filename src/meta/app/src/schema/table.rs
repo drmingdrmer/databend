@@ -521,15 +521,6 @@ pub struct CreateTableReq {
     pub create_option: CreateOption,
     pub name_ident: TableNameIdent,
     pub table_meta: TableMeta,
-
-    /// Set it to true if a dropped table needs to be created,
-    ///
-    /// since [CreateOption] is used by various scenarios, we use
-    /// this dedicated flag to mark this behavior.
-    ///
-    /// currently used in atomic CTAS.
-    #[deprecated]
-    pub as_dropped: bool,
 }
 
 impl CreateTableReq {

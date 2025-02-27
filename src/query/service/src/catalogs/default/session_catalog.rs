@@ -449,10 +449,10 @@ impl Catalog for SessionCatalog {
         self.inner.gc_drop_tables(req).await
     }
 
-    async fn create_table(&self, req: CreateTableReq) -> Result<CreateTableReply> {
+    async fn create_table(&self, req: CreateTableReq, orphan: bool) -> Result<CreateTableReply> {
         match req.table_meta.options.get(OPT_KEY_TEMP_PREFIX) {
-            Some(_) => self.temp_tbl_mgr.lock().create_table(req),
-            None => self.inner.create_table(req).await,
+            Some(_) => self.temp_tbl_mgr.lock().create_table(req, orphan),
+            None => self.inner.create_table(req, orphan).await,
         }
     }
 

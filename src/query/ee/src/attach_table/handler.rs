@@ -110,7 +110,6 @@ impl AttachTableHandler for RealAttachTableHandler {
                 table_name: plan.table.to_string(),
             },
             table_meta,
-            as_dropped: false,
         };
 
         Ok(req)

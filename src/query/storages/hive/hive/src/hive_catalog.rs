@@ -501,7 +501,7 @@ impl Catalog for HiveCatalog {
     }
 
     #[async_backtrace::framed]
-    async fn create_table(&self, _req: CreateTableReq) -> Result<CreateTableReply> {
+    async fn create_table(&self, _req: CreateTableReq, _: bool) -> Result<CreateTableReply> {
         Err(ErrorCode::Unimplemented(
             "Cannot create table in HIVE catalog",
         ))

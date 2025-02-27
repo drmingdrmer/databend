@@ -1055,18 +1055,10 @@ impl<KV: kvapi::KVApi<Error = MetaError> + ?Sized> SchemaApi for KV {
 
         let mut maybe_key_table_id: Option<TableId> = None;
 
-        if !req.as_dropped && req.table_meta.drop_on.is_some() {
+        if req.table_meta.drop_on.is_some() {
             return Err(KVAppError::AppError(AppError::CreateTableWithDropTime(
                 CreateTableWithDropTime::new(&tenant_dbname_tbname.table_name),
             )));
-        }
-
-        if req.as_dropped && req.table_meta.drop_on.is_none() {
-            return Err(KVAppError::AppError(
-                AppError::CreateAsDropTableWithoutDropTime(CreateAsDropTableWithoutDropTime::new(
-                    &tenant_dbname_tbname.table_name,
-                )),
-            ));
         }
 
         // fixed: does not change in every loop.
@@ -1086,17 +1078,7 @@ impl<KV: kvapi::KVApi<Error = MetaError> + ?Sized> SchemaApi for KV {
             database_id: *seq_db_id.data,
             table_name: req.name_ident.table_name.clone(),
         };
-        // if req.as_dropped, append new table id to orphan table id list
-        let (orphan_table_name, save_key_table_id_list) = if req.as_dropped {
-            let now = Utc::now().timestamp_micros();
-            let orphan_table_name = format!("{}@{}", ORPHAN_POSTFIX, now);
-            (Some(orphan_table_name.clone()), TableIdHistoryIdent {
-                database_id: *seq_db_id.data,
-                table_name: orphan_table_name,
-            })
-        } else {
-            (None, key_table_id_list.clone())
-        };
+        let save_key_table_id_list = key_table_id_list.clone();
 
         // The keys of values to re-fetch for every retry in this txn.
         let keys = vec![
@@ -1188,27 +1170,18 @@ impl<KV: kvapi::KVApi<Error = MetaError> + ?Sized> SchemaApi for KV {
                             });
                         }
                         CreateOption::CreateOrReplace => {
-                            if req.as_dropped {
-                                // If the table is being created as a dropped table, we do not
-                                // need to combine with drop_table_txn operations, just return
-                                // the sequence number associated with the value part of
-                                // the key-value pair (key_dbid_tbname, table_id).
-
-                                SeqV::new(id.seq, *id.data)
-                            } else {
-                                let (seq, id) = construct_drop_table_txn_operations(
-                                    self,
-                                    req.name_ident.table_name.clone(),
-                                    &req.name_ident.tenant,
-                                    *id.data,
-                                    *seq_db_id.data,
-                                    true,
-                                    false,
-                                    &mut txn,
-                                )
-                                .await?;
-                                SeqV::new(seq, id)
-                            }
+                            let (seq, id) = construct_drop_table_txn_operations(
+                                self,
+                                req.name_ident.table_name.clone(),
+                                &req.name_ident.tenant,
+                                *id.data,
+                                *seq_db_id.data,
+                                true,
+                                false,
+                                &mut txn,
+                            )
+                            .await?;
+                            SeqV::new(seq, id)
                         }
                     }
                 } else {
@@ -1223,21 +1196,7 @@ impl<KV: kvapi::KVApi<Error = MetaError> + ?Sized> SchemaApi for KV {
 
                 let tb_id_list = v.unwrap_or_default();
 
-                // if `as_dropped` is true, append new table id into a temp new table
-                // if create table return success, table id will be moved to table id list,
-                // else, it will be vacuum when `vacuum drop table`
-                if req.as_dropped {
-                    (
-                        // a new TableIdList
-                        TableIdList::new(),
-                        // save last table id and check when commit table meta
-                        tb_id_list.data.id_list.last().copied(),
-                        // seq MUST be 0
-                        0,
-                    )
-                } else {
-                    (tb_id_list.data, None, tb_id_list.seq)
-                }
+                (tb_id_list.data, None, tb_id_list.seq)
             };
 
             // Table id is unique and does not need to re-generate in every loop.
@@ -1289,20 +1248,10 @@ impl<KV: kvapi::KVApi<Error = MetaError> + ?Sized> SchemaApi for KV {
                     txn_op_put(&key_table_id_to_name, serialize_struct(&key_dbid_tbname)?), /* __fd_table_id_to_name/db_id/table_name -> DBIdTableName */
                 ]);
 
-                if req.as_dropped {
-                    // To create the table in a "dropped" state,
-                    // - we intentionally omit the tuple (key_dbid_name, table_id).
-                    //   This ensures the table remains invisible, and available to be vacuumed.
-                    // - also, the `table_id_seq` of newly create table should be obtained.
-                    //   The caller need to know the `table_id_seq` to manipulate the table more efficiently
-                    //   This TxnOp::Get is(should be) the last operation in the `if_then` list.
-                    txn.if_then.push(txn_op_get(key_table_id));
-                } else {
-                    // Otherwise, make newly created table visible by putting the tuple:
-                    // (tenant, db_id, tb_name) -> tb_id
-                    txn.if_then
-                        .push(txn_op_put(&key_dbid_tbname, serialize_u64(table_id)?))
-                }
+                // Otherwise, make newly created table visible by putting the tuple:
+                // (tenant, db_id, tb_name) -> tb_id
+                txn.if_then
+                    .push(txn_op_put(&key_dbid_tbname, serialize_u64(table_id)?));
 
                 let (succ, responses) = send_txn(self, txn).await?;
 
@@ -1315,14 +1264,7 @@ impl<KV: kvapi::KVApi<Error = MetaError> + ?Sized> SchemaApi for KV {
                 );
 
                 // extract the table_id_seq (if any) from the kv txn responses
-                let table_id_seq = if req.as_dropped {
-                    responses.last().and_then(|r| match &r.response {
-                        Some(Response::Get(resp)) => resp.value.as_ref().map(|v| v.seq),
-                        _ => None,
-                    })
-                } else {
-                    None
-                };
+                let table_id_seq = None;
 
                 if succ {
                     return Ok(CreateTableReply {
@@ -1332,7 +1274,7 @@ impl<KV: kvapi::KVApi<Error = MetaError> + ?Sized> SchemaApi for KV {
                         new_table: dbid_tbname_seq == 0,
                         spec_vec: None,
                         prev_table_id,
-                        orphan_table_name,
+                        orphan_table_name: None,
                     });
                 } else {
                     // re-run txn with re-fetched data
@@ -1353,23 +1295,9 @@ impl<KV: kvapi::KVApi<Error = MetaError> + ?Sized> SchemaApi for KV {
             let name = &req.name_ident.table_name;
             let name_ident = &req.name_ident;
 
-            match req.table_meta.engine.as_str() {
-                "STREAM" => {
-                    let exist_err =
-                        StreamAlreadyExists::new(name, format!("create_table: {}", name_ident));
-                    AppError::from(exist_err)
-                }
-                "VIEW" => {
-                    let exist_err =
-                        ViewAlreadyExists::new(name, format!("create_table: {}", name_ident));
-                    AppError::from(exist_err)
-                }
-                _ => {
-                    let exist_err =
-                        TableAlreadyExists::new(name, format!("create_table: {}", name_ident));
-                    AppError::from(exist_err)
-                }
-            }
+            let exist_err =
+                TableAlreadyExists::new(name, format!("create_orphan_table: {}", name_ident));
+            AppError::from(exist_err)
         }
 
         debug!(req :? =(&req); "SchemaApi: {}", func_name!());

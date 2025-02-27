@@ -178,11 +178,10 @@ impl CreateTableInterpreter {
 
         let mut req = self.build_request(None)?;
 
-        // create a dropped table first.
-        req.as_dropped = true;
         req.table_meta.drop_on = Some(Utc::now());
         let table_meta = req.table_meta.clone();
-        let reply = catalog.create_table(req.clone()).await?;
+        // create an orphan table first.
+        let reply = catalog.create_table(req.clone(), true).await?;
         if !reply.new_table && self.plan.create_option != CreateOption::CreateOrReplace {
             return Ok(PipelineBuildResult::create());
         }
@@ -339,7 +338,7 @@ impl CreateTableInterpreter {
             self.build_request(stat)
         }?;
 
-        let reply = catalog.create_table(req.clone()).await?;
+        let reply = catalog.create_table(req.clone(), false).await?;
 
         if !req.table_meta.options.contains_key(OPT_KEY_TEMP_PREFIX) {
             // grant the ownership of the table to the current role, the above req.table_meta.owner could be removed in future.
@@ -451,7 +450,6 @@ impl CreateTableInterpreter {
                 table_name: self.plan.table.to_string(),
             },
             table_meta,
-            as_dropped: false,
         };
 
         Ok(req)

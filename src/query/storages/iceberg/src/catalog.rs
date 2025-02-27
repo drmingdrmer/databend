@@ -386,7 +386,7 @@ impl Catalog for IcebergCatalog {
     }
 
     #[async_backtrace::framed]
-    async fn create_table(&self, _req: CreateTableReq) -> Result<CreateTableReply> {
+    async fn create_table(&self, _req: CreateTableReq, _: bool) -> Result<CreateTableReply> {
         unimplemented!()
     }
 

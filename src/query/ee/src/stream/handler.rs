@@ -146,10 +146,9 @@ impl StreamHandler for RealStreamHandler {
                 comment: plan.comment.clone().unwrap_or("".to_string()),
                 ..Default::default()
             },
-            as_dropped: false,
         };
 
-        catalog.create_table(req).await
+        catalog.create_table(req, false).await
     }
 
     #[async_backtrace::framed]

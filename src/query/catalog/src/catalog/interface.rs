@@ -328,7 +328,7 @@ pub trait Catalog: DynClone + Send + Sync + Debug {
         Err(ErrorCode::Unimplemented("'gc_drop_tables' not implemented"))
     }
 
-    async fn create_table(&self, req: CreateTableReq) -> Result<CreateTableReply>;
+    async fn create_table(&self, req: CreateTableReq, orphan: bool) -> Result<CreateTableReply>;
 
     async fn drop_table_by_id(&self, req: DropTableByIdReq) -> Result<DropTableReply>;
 

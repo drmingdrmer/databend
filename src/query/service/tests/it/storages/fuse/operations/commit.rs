@@ -1016,7 +1016,7 @@ impl Catalog for FakedCatalog {
         todo!()
     }
 
-    async fn create_table(&self, _req: CreateTableReq) -> Result<CreateTableReply> {
+    async fn create_table(&self, _req: CreateTableReq, _: bool) -> Result<CreateTableReply> {
         todo!()
     }
 

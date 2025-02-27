@@ -491,7 +491,7 @@ impl Catalog for DatabaseCatalog {
     }
 
     #[async_backtrace::framed]
-    async fn create_table(&self, req: CreateTableReq) -> Result<CreateTableReply> {
+    async fn create_table(&self, req: CreateTableReq, orphan: bool) -> Result<CreateTableReply> {
         info!("Create table from req:{:?}", req);
 
         if self
@@ -499,9 +499,9 @@ impl Catalog for DatabaseCatalog {
             .exists_database(req.tenant(), req.db_name())
             .await?
         {
-            return self.immutable_catalog.create_table(req).await;
+            return self.immutable_catalog.create_table(req, orphan).await;
         }
-        self.mutable_catalog.create_table(req).await
+        self.mutable_catalog.create_table(req, orphan).await
     }
 
     #[async_backtrace::framed]
