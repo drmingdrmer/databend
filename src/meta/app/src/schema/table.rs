@@ -528,6 +528,7 @@ pub struct CreateTableReq {
     /// this dedicated flag to mark this behavior.
     ///
     /// currently used in atomic CTAS.
+    #[deprecated]
     pub as_dropped: bool,
 }
 

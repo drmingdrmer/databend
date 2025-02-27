@@ -120,7 +120,7 @@ pub trait Database: DynClone + Sync + Send {
     }
 
     #[async_backtrace::framed]
-    async fn create_table(&self, _req: CreateTableReq) -> Result<CreateTableReply> {
+    async fn create_table(&self, _req: CreateTableReq, _orphan: bool) -> Result<CreateTableReply> {
         Err(ErrorCode::Unimplemented(format!(
             "UnImplement create_table in {} Database",
             self.name()

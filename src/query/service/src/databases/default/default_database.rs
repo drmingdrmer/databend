@@ -232,8 +232,12 @@ impl Database for DefaultDatabase {
     }
 
     #[async_backtrace::framed]
-    async fn create_table(&self, req: CreateTableReq) -> Result<CreateTableReply> {
-        let res = self.ctx.meta.create_table(req).await?;
+    async fn create_table(&self, req: CreateTableReq, orphan: bool) -> Result<CreateTableReply> {
+        let res = if orphan {
+            self.ctx.meta.create_orphan_table(req).await?
+        } else {
+            self.ctx.meta.create_table(req).await?
+        };
         Ok(res)
     }
 

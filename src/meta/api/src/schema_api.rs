@@ -34,6 +34,7 @@ use databend_common_meta_app::schema::CreateIndexReply;
 use databend_common_meta_app::schema::CreateIndexReq;
 use databend_common_meta_app::schema::CreateLockRevReply;
 use databend_common_meta_app::schema::CreateLockRevReq;
+use databend_common_meta_app::schema::CreateOption;
 use databend_common_meta_app::schema::CreateTableIndexReq;
 use databend_common_meta_app::schema::CreateTableReply;
 use databend_common_meta_app::schema::CreateTableReq;
@@ -205,6 +206,14 @@ pub trait SchemaApi: Send + Sync {
     // table
 
     async fn create_table(&self, req: CreateTableReq) -> Result<CreateTableReply, KVAppError>;
+
+    /// Create an orphan table, which is marked as dropped.
+    ///
+    /// Currently used in atomic CTAS.
+    async fn create_orphan_table(
+        &self,
+        req: CreateTableReq,
+    ) -> Result<CreateTableReply, KVAppError>;
 
     async fn drop_table_by_id(&self, req: DropTableByIdReq) -> Result<DropTableReply, KVAppError>;
 

@@ -644,11 +644,11 @@ impl Catalog for MutableCatalog {
     }
 
     #[async_backtrace::framed]
-    async fn create_table(&self, req: CreateTableReq) -> Result<CreateTableReply> {
+    async fn create_table(&self, req: CreateTableReq, orphan: bool) -> Result<CreateTableReply> {
         let db = self
             .get_database(&req.name_ident.tenant, &req.name_ident.db_name)
             .await?;
-        db.create_table(req).await
+        db.create_table(req, orphan).await
     }
 
     #[async_backtrace::framed]
