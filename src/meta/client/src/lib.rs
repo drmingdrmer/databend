@@ -161,6 +161,9 @@ use semver::Version;
 /// - 2025-09-27: since TODO: update when merged
 ///   👥 client: require 1.2.770, remove calling RPC kv_api
 ///
+/// - 2025-xx-x: since TODO
+///   🖥 server: require the above change; remove `kv_api`.
+///
 /// Server feature set:
 /// ```yaml
 /// server_features:

@@ -28,7 +28,6 @@ use databend_common_meta_types::protobuf::KeysCount;
 use databend_common_meta_types::protobuf::KeysLayoutRequest;
 use databend_common_meta_types::protobuf::MemberListReply;
 use databend_common_meta_types::protobuf::MemberListRequest;
-use databend_common_meta_types::protobuf::RaftReply;
 use databend_common_meta_types::protobuf::RaftRequest;
 use databend_common_meta_types::protobuf::StreamItem;
 use databend_common_meta_types::protobuf::WatchRequest;
@@ -243,14 +242,6 @@ impl EstablishedClient {
     /// A shortcut to [`rotate_failing_endpoint`]
     pub(crate) fn rotate_failing_target(&self) {
         rotate_failing_endpoint(&self.endpoints, Some(self.target_endpoint()), self);
-    }
-
-    #[async_backtrace::framed]
-    pub async fn kv_api(
-        &mut self,
-        request: impl tonic::IntoRequest<RaftRequest>,
-    ) -> Result<Response<RaftReply>, Status> {
-        self.client.kv_api(request).await.update_client(self)
     }
 
     #[async_backtrace::framed]

@@ -28,6 +28,8 @@ use databend_common_meta_kvapi::kvapi::UpsertKVReply;
 use databend_common_meta_raft_store::leveled_store::db_exporter::DBExporter;
 use databend_common_meta_types::protobuf::KeysCount;
 use databend_common_meta_types::protobuf::KeysLayoutRequest;
+use databend_common_meta_kvapi::kvapi::KVApi;
+use databend_common_meta_kvapi::kvapi::UpsertKVReply;
 use databend_common_meta_types::protobuf::MemberListRequest;
 use databend_common_meta_types::protobuf::StreamItem;
 use databend_common_meta_types::protobuf::WatchRequest;
@@ -45,7 +47,6 @@ use databend_common_meta_types::MetaAPIError;
 use databend_common_meta_types::Node;
 use databend_common_meta_types::TxnReply;
 use databend_common_meta_types::TxnRequest;
-use databend_common_meta_types::UpsertKV;
 use futures::stream::BoxStream;
 use futures::Stream;
 use tokio::sync::mpsc;
@@ -129,24 +130,6 @@ impl MetaHandle {
     pub async fn get_meta_node(&self) -> Result<Arc<MetaNode>, MetaNodeStopped> {
         self.request(|meta_node| Box::pin(future::ready(meta_node.clone())))
             .await
-    }
-
-    pub async fn handle_upsert_kv(
-        &self,
-        upsert: UpsertKV,
-    ) -> Result<Result<UpsertKVReply, MetaAPIError>, MetaNodeStopped> {
-        self.request(move |meta_node| {
-            let fu = async move {
-                meta_node
-                    .kv_api()
-                    .upsert_kv(upsert.clone())
-                    .log_elapsed_info(format!("UpsertKV: {:?}", upsert))
-                    .await
-            };
-
-            Box::pin(fu)
-        })
-        .await
     }
 
     pub async fn handle_kv_read_v1(

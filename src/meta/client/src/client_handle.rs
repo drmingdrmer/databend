@@ -26,7 +26,6 @@ use databend_common_base::runtime::Runtime;
 use databend_common_base::runtime::ThreadTracker;
 use databend_common_base::runtime::UnlimitedFuture;
 use databend_common_meta_kvapi::kvapi::ListKVReq;
-use databend_common_meta_kvapi::kvapi::UpsertKVReply;
 use databend_common_meta_types::protobuf::ClientInfo;
 use databend_common_meta_types::protobuf::ClusterStatus;
 use databend_common_meta_types::protobuf::MemberListReply;
@@ -36,8 +35,6 @@ use databend_common_meta_types::protobuf::WatchResponse;
 use databend_common_meta_types::ConnectionError;
 use databend_common_meta_types::MetaClientError;
 use databend_common_meta_types::MetaError;
-use databend_common_meta_types::TxnRequest;
-use databend_common_meta_types::UpsertKV;
 use databend_common_metrics::count::Count;
 use fastrace::Span;
 use log::debug;
@@ -124,15 +121,6 @@ impl ClientHandle {
         watch: WatchRequest,
     ) -> Result<tonic::codec::Streaming<WatchResponse>, MetaClientError> {
         self.request((watch, InitFlag)).await
-    }
-
-    pub async fn upsert_via_txn(&self, upsert: UpsertKV) -> Result<UpsertKVReply, MetaClientError> {
-        let txn = TxnRequest::from_upsert(upsert);
-
-        let resp = self.request(txn).await?;
-
-        let reply = resp.into_upsert_reply()?;
-        Ok(reply)
     }
 
     /// Send a request to the internal worker task, which will be running in another runtime.

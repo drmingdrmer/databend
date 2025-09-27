@@ -19,7 +19,7 @@ use std::time::Duration;
 
 use databend_common_meta_client::ClientHandle;
 use databend_common_meta_client::Streamed;
-use databend_common_meta_kvapi::kvapi::KVApi;
+use databend_common_meta_kvapi::kvapi::KvApiExt;
 use databend_common_meta_kvapi::kvapi::ListKVReq;
 use databend_common_meta_kvapi::kvapi::MGetKVReq;
 use databend_common_meta_types::normalize_meta::NormalizeMeta;

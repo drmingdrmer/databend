@@ -28,7 +28,6 @@ use databend_common_base::runtime::TrackingGuard;
 use databend_common_grpc::GrpcClaim;
 use databend_common_grpc::GrpcToken;
 use databend_common_meta_client::MetaGrpcReadReq;
-use databend_common_meta_client::MetaGrpcReq;
 use databend_common_meta_types::protobuf as pb;
 use databend_common_meta_types::protobuf::meta_service_server::MetaService;
 use databend_common_meta_types::protobuf::ClientInfo;
@@ -41,7 +40,6 @@ use databend_common_meta_types::protobuf::KeysCount;
 use databend_common_meta_types::protobuf::KeysLayoutRequest;
 use databend_common_meta_types::protobuf::MemberListReply;
 use databend_common_meta_types::protobuf::MemberListRequest;
-use databend_common_meta_types::protobuf::RaftReply;
 use databend_common_meta_types::protobuf::RaftRequest;
 use databend_common_meta_types::protobuf::StreamItem;
 use databend_common_meta_types::protobuf::WatchRequest;
@@ -129,38 +127,6 @@ impl MetaServiceImpl {
             Status::unauthenticated(format!("token verify failed: {}, {}", token, e))
         })?;
         Ok(claim)
-    }
-
-    #[fastrace::trace]
-    async fn handle_kv_api(&self, request: Request<RaftRequest>) -> Result<RaftReply, Status> {
-        let req: MetaGrpcReq = request.try_into()?;
-
-        let meta_handle = self.try_get_meta_handle()?;
-        let id = meta_handle.id;
-
-        debug!(
-            "id={} {}: Received MetaGrpcReq: {:?}",
-            id,
-            func_name!(),
-            req
-        );
-
-        let reply = match &req {
-            MetaGrpcReq::UpsertKV(a) => {
-                let res = meta_handle.handle_upsert_kv(a.clone()).await;
-                debug!(
-                    "id={} MetaGrpcReq UpsertKV: request: {:?} res: {:?}",
-                    id, req, res
-                );
-                let res = res?;
-                // TODO: the MetaApiError should be converted to Status
-                RaftReply::from(res)
-            }
-        };
-
-        network_metrics::incr_request_result(reply.error.is_empty());
-
-        Ok(reply)
     }
 
     #[fastrace::trace]
@@ -278,24 +244,6 @@ impl MetaService for MetaServiceImpl {
                 auth.username
             )))
         }
-    }
-
-    async fn kv_api(&self, request: Request<RaftRequest>) -> Result<Response<RaftReply>, Status> {
-        self.check_token(request.metadata())?;
-
-        let _guard = thread_tracking_guard(&request);
-        ThreadTracker::tracking_future(async move {
-            network_metrics::incr_recv_bytes(request.get_ref().encoded_len() as u64);
-            let _guard = InFlightWrite::guard();
-
-            let root = start_trace_for_remote_request(func_path!(), &request);
-            let reply = self.handle_kv_api(request).in_span(root).await?;
-
-            network_metrics::incr_sent_bytes(reply.encoded_len() as u64);
-
-            Ok(Response::new(reply))
-        })
-        .await
     }
 
     type KvReadV1Stream = BoxStream<StreamItem>;

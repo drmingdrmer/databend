@@ -17,10 +17,8 @@ use std::ops::Deref;
 use async_trait::async_trait;
 use databend_common_meta_types::errors;
 use databend_common_meta_types::protobuf::StreamItem;
-use databend_common_meta_types::Change;
 use databend_common_meta_types::TxnReply;
 use databend_common_meta_types::TxnRequest;
-use databend_common_meta_types::UpsertKV;
 use futures_util::stream::BoxStream;
 
 use crate::kvapi;
@@ -46,10 +44,12 @@ pub trait KVApi: Send + Sync {
     /// Depends on the implementation the error could be different.
     /// E.g., a remove kvapi::KVApi impl returns network error or remote storage error.
     /// A local kvapi::KVApi impl just returns storage error.
-    type Error: std::error::Error + From<errors::IncompleteStream> + Send + Sync + 'static;
-
-    /// Update or insert a key-value record.
-    async fn upsert_kv(&self, req: UpsertKV) -> Result<Change<Vec<u8>>, Self::Error>;
+    type Error: std::error::Error
+        + From<errors::IncompleteStream>
+        + From<errors::InvalidReply>
+        + Send
+        + Sync
+        + 'static;
 
     /// Get key-values by keys.
     ///
@@ -68,10 +68,6 @@ pub trait KVApi: Send + Sync {
 #[async_trait]
 impl<U: kvapi::KVApi, T: Deref<Target = U> + Send + Sync> kvapi::KVApi for T {
     type Error = U::Error;
-
-    async fn upsert_kv(&self, act: UpsertKV) -> Result<Change<Vec<u8>>, Self::Error> {
-        self.deref().upsert_kv(act).await
-    }
 
     async fn get_kv_stream(&self, keys: &[String]) -> Result<KVStream<Self::Error>, Self::Error> {
         self.deref().get_kv_stream(keys).await

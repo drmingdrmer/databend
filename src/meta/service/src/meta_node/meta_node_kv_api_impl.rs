@@ -20,14 +20,12 @@ use databend_common_meta_kvapi::kvapi;
 use databend_common_meta_kvapi::kvapi::KVStream;
 use databend_common_meta_kvapi::kvapi::ListKVReq;
 use databend_common_meta_kvapi::kvapi::MGetKVReq;
-use databend_common_meta_kvapi::kvapi::UpsertKVReply;
 use databend_common_meta_types::AppliedState;
 use databend_common_meta_types::Cmd;
 use databend_common_meta_types::LogEntry;
 use databend_common_meta_types::MetaAPIError;
 use databend_common_meta_types::TxnReply;
 use databend_common_meta_types::TxnRequest;
-use databend_common_meta_types::UpsertKV;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use log::info;
@@ -50,18 +48,6 @@ impl<'a> MetaKVApi<'a> {
 #[async_trait]
 impl<'a> kvapi::KVApi for MetaKVApi<'a> {
     type Error = MetaAPIError;
-
-    async fn upsert_kv(&self, act: UpsertKV) -> Result<UpsertKVReply, Self::Error> {
-        let ent = LogEntry::new(Cmd::UpsertKV(act));
-        let rst = self.inner.write(ent).await?;
-
-        match rst {
-            AppliedState::KV(x) => Ok(x),
-            _ => {
-                unreachable!("expect type {}", "AppliedState::KV")
-            }
-        }
-    }
 
     #[fastrace::trace]
     async fn get_kv_stream(&self, keys: &[String]) -> Result<KVStream<Self::Error>, Self::Error> {
@@ -133,10 +119,6 @@ impl MetaKVApiOwned {
 #[async_trait]
 impl kvapi::KVApi for MetaKVApiOwned {
     type Error = MetaAPIError;
-
-    async fn upsert_kv(&self, act: UpsertKV) -> Result<UpsertKVReply, Self::Error> {
-        self.inner.kv_api().upsert_kv(act).await
-    }
 
     async fn get_kv_stream(&self, keys: &[String]) -> Result<KVStream<Self::Error>, Self::Error> {
         self.inner.kv_api().get_kv_stream(keys).await

@@ -18,7 +18,7 @@ use std::time::Duration;
 
 use databend_common_base::base::Stoppable;
 use databend_common_base::runtime::spawn_named;
-use databend_common_meta_kvapi::kvapi::KVApi;
+use databend_common_meta_kvapi::kvapi::KvApiExt;
 use databend_common_meta_semaphore::Semaphore;
 use databend_common_meta_types::UpsertKV;
 use log::info;

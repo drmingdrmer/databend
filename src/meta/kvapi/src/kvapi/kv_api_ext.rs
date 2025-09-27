@@ -15,15 +15,28 @@
 use async_trait::async_trait;
 use databend_common_meta_types::errors;
 use databend_common_meta_types::SeqV;
+use databend_common_meta_types::TxnRequest;
+use databend_common_meta_types::UpsertKV;
 use futures_util::StreamExt;
 use futures_util::TryStreamExt;
 use log::debug;
 
 use crate::kvapi::KVApi;
+use crate::kvapi::UpsertKVReply;
 
 /// Extend the `KVApi` trait with auto implemented handy methods.
 #[async_trait]
 pub trait KvApiExt: KVApi {
+    async fn upsert_kv(&self, req: UpsertKV) -> Result<UpsertKVReply, Self::Error> {
+        let txn = TxnRequest::from_upsert(req);
+
+        let resp = self.transaction(txn).await?;
+
+        let reply = resp.into_upsert_reply()?;
+
+        Ok(reply)
+    }
+
     /// Get single key-value record by key.
     async fn get_kv(&self, key: &str) -> Result<Option<SeqV>, Self::Error> {
         let mut strm = self.get_kv_stream(&[key.to_string()]).await?;

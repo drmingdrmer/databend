@@ -16,11 +16,9 @@ use databend_common_meta_kvapi::kvapi;
 use databend_common_meta_kvapi::kvapi::KVStream;
 use databend_common_meta_kvapi::kvapi::ListKVReq;
 use databend_common_meta_kvapi::kvapi::MGetKVReq;
-use databend_common_meta_kvapi::kvapi::UpsertKVReply;
 use databend_common_meta_types::MetaError;
 use databend_common_meta_types::TxnReply;
 use databend_common_meta_types::TxnRequest;
-use databend_common_meta_types::UpsertKV;
 use futures::StreamExt;
 use futures::TryStreamExt;
 
@@ -30,12 +28,6 @@ use crate::Streamed;
 #[tonic::async_trait]
 impl kvapi::KVApi for ClientHandle {
     type Error = MetaError;
-
-    #[fastrace::trace]
-    async fn upsert_kv(&self, act: UpsertKV) -> Result<UpsertKVReply, Self::Error> {
-        let reply = self.upsert_via_txn(act).await?;
-        Ok(reply)
-    }
 
     #[fastrace::trace]
     async fn get_kv_stream(&self, keys: &[String]) -> Result<KVStream<Self::Error>, Self::Error> {

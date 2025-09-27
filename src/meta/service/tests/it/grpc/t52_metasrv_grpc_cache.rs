@@ -20,6 +20,7 @@ use databend_common_base::base::Stoppable;
 use databend_common_meta_cache::Cache;
 use databend_common_meta_kvapi::kvapi::KVApi;
 use databend_common_meta_types::normalize_meta::NormalizeMeta;
+use databend_common_meta_kvapi::kvapi::KvApiExt;
 use databend_common_meta_types::SeqV;
 use databend_common_meta_types::UpsertKV;
 use log::debug;

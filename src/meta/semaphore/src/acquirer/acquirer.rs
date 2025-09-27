@@ -22,6 +22,7 @@ use codeq::Encode;
 use databend_common_base::runtime::spawn_named;
 use databend_common_meta_client::ClientHandle;
 use databend_common_meta_kvapi::kvapi::KVApi;
+use databend_common_meta_kvapi::kvapi::KvApiExt;
 use databend_common_meta_types::protobuf as pb;
 use databend_common_meta_types::MatchSeq;
 use databend_common_meta_types::UpsertKV;

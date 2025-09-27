@@ -432,12 +432,6 @@ service MetaService {
   // handshake
   rpc Handshake(stream HandshakeRequest) returns (stream HandshakeResponse);
 
-  // General KV API for get, mget, list, and upsert;
-  // It is introduced to replace `WriteMsg` and `ReadMsg`.
-  //
-  // 2022-09-14: since: 0.8.35
-  rpc KvApi(RaftRequest) returns (RaftReply);
-
   // Handle application read request.
   //
   // This API is not exposed to client directly, but is only used for internal request forwarding.

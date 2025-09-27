@@ -18,11 +18,9 @@ use std::io;
 use databend_common_meta_kvapi::kvapi;
 use databend_common_meta_kvapi::kvapi::KVStream;
 use databend_common_meta_types::protobuf::StreamItem;
-use databend_common_meta_types::Change;
 use databend_common_meta_types::SeqV;
 use databend_common_meta_types::TxnReply;
 use databend_common_meta_types::TxnRequest;
-use databend_common_meta_types::UpsertKV;
 use futures_util::StreamExt;
 use futures_util::TryStreamExt;
 use map_api::mvcc::ScopedGet;
@@ -45,10 +43,6 @@ pub struct SMV003KVApi<'a> {
 #[async_trait::async_trait]
 impl kvapi::KVApi for SMV003KVApi<'_> {
     type Error = io::Error;
-
-    async fn upsert_kv(&self, _req: UpsertKV) -> Result<Change<Vec<u8>>, Self::Error> {
-        unreachable!("write operation SM2KVApi::upsert_kv is disabled")
-    }
 
     async fn get_kv_stream(&self, keys: &[String]) -> Result<KVStream<Self::Error>, Self::Error> {
         let local_now_ms = since_epoch_millis();

@@ -26,6 +26,7 @@ use databend_common_meta_client::MetaGrpcClient;
 use databend_common_meta_kvapi::kvapi;
 use databend_common_meta_kvapi::kvapi::KVApi;
 use databend_common_meta_types::normalize_meta::NormalizeMeta;
+use databend_common_meta_kvapi::kvapi::KvApiExt;
 use databend_common_meta_types::protobuf::watch_request::FilterType;
 use databend_common_meta_types::protobuf::Event;
 use databend_common_meta_types::protobuf::KvMeta;

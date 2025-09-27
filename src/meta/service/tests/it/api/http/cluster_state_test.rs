@@ -21,7 +21,7 @@ use std::time::Duration;
 use databend_common_base::base::tokio;
 use databend_common_base::base::tokio::time::Instant;
 use databend_common_base::base::Stoppable;
-use databend_common_meta_kvapi::kvapi::KVApi;
+use databend_common_meta_kvapi::kvapi::KvApiExt;
 use databend_common_meta_types::node::Node;
 use databend_common_meta_types::raft_types::new_log_id;
 use databend_common_meta_types::UpsertKV;
