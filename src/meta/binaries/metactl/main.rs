@@ -73,6 +73,15 @@ struct App {
 
     #[clap(flatten)]
     globals: GlobalArgs,
+
+    /// Number of tokio worker threads (default: number of CPUs).
+    ///
+    /// metactl's Lua runtime pins spawned tasks to a single thread (mlua's VM
+    /// is !Send, so `metactl.spawn` uses `spawn_local` on a `LocalSet`), so
+    /// extra workers only serve gRPC I/O. Lower this when running several
+    /// client processes on one host to avoid oversubscribing the CPU.
+    #[clap(long, global = true)]
+    worker_threads: Option<usize>,
 }
 
 impl App {
@@ -630,10 +639,24 @@ enum CtlCommand {
 ///   ["raft_log",{"Logs":{"key":0,"value":{"log_id":{"leader_id":{"term":0,"node_id":0},"index":0},"payload":{"Membership":{"configs":[[1]],"nodes":{"1":{}}}}}}}]
 ///   ["raft_log",{"Logs":{"key":1,"value":{"log_id":{"leader_id":{"term":1,"node_id":0},"index":1},"payload":"Blank"}}}]
 ///   ```
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+#[allow(clippy::disallowed_methods, clippy::disallowed_types)]
+fn main() -> anyhow::Result<()> {
     let app = App::parse();
 
+    // The tokio default worker count (num-cpus) over-provisions metactl: its
+    // Lua runtime pins all spawned tasks to a single thread (see
+    // App::worker_threads), so extra workers only serve gRPC I/O, and running
+    // several client processes on one host oversubscribes the CPU.
+    // --worker-threads overrides the count.
+    let mut builder = tokio::runtime::Builder::new_multi_thread();
+    builder.enable_all();
+    if let Some(n) = app.worker_threads.filter(|n| *n > 0) {
+        builder.worker_threads(n);
+    }
+    builder.build()?.block_on(run(app))
+}
+
+async fn run(app: App) -> anyhow::Result<()> {
     let log_config = LogConfig {
         file: FileConfig {
             on: true,

@@ -43,6 +43,18 @@ use crate::admin::MetaAdminClient;
 const LUA_UTIL: &str = include_str!("../lua/lua_util.lua");
 const ZIPF_LOAD_GENERATOR: &str = include_str!("../lua/zipf_load_generator.lua");
 
+/// Default gRPC RPC timeout for Lua-created clients, in seconds. The Lua
+/// `new_grpc_client(address[, opts])` binding overrides it via `opts.timeout`.
+/// It is deliberately generous: under heavy concurrent load the leader's commit
+/// latency can reach several seconds, and too short a timeout turns overload
+/// into congestion collapse — the client gives up on a write the server is
+/// actually committing, then blind-retries, amplifying the load.
+const DEFAULT_CLIENT_TIMEOUT_SECS: f64 = 60.0;
+
+/// Client RPC calls at least this slow are logged at WARN, so slow paths are
+/// visible without turning on debug logging for every call.
+const SLOW_CLIENT_OP: Duration = Duration::from_millis(500);
+
 fn invalid_input(path: &str, message: impl std::fmt::Display) -> Error {
     Error::RuntimeError(format!("{path}: {message}"))
 }
@@ -259,12 +271,25 @@ where
     F: FnOnce() -> Fut,
     Fut: Future<Output = Result<T, E>>,
 {
-    match f().await {
-        Ok(result) => match lua.to_value(&result) {
-            Ok(v) => Ok((Some(v), None)),
-            Err(e) => Ok((None, Some(format!("Lua conversion error: {e}")))),
-        },
-        Err(e) => Ok((None, Some(format!("{api_err}: {e}")))),
+    let start = std::time::Instant::now();
+    let outcome = f().await;
+    let elapsed = start.elapsed();
+    match outcome {
+        Ok(result) => {
+            if elapsed >= SLOW_CLIENT_OP {
+                log::warn!("lua client op `{api_err}` slow: took {elapsed:?}");
+            } else {
+                log::debug!("lua client op `{api_err}` ok: took {elapsed:?}");
+            }
+            match lua.to_value(&result) {
+                Ok(v) => Ok((Some(v), None)),
+                Err(e) => Ok((None, Some(format!("Lua conversion error: {e}")))),
+            }
+        }
+        Err(e) => {
+            log::warn!("lua client op `{api_err}` failed after {elapsed:?}: {e}");
+            Ok((None, Some(format!("{api_err}: {e}"))))
+        }
     }
 }
 
@@ -379,25 +404,118 @@ impl UserData for LuaTask {
     }
 }
 
+/// Read an optional duration field expressed in (possibly fractional) seconds.
+///
+/// Returns `Ok(None)` when the field is absent. A present value must be a
+/// positive number; zero or negative is rejected so a misconfigured timeout
+/// fails fast instead of silently disabling the client.
+fn read_duration_secs(table: &Table, path: &str, field: &str) -> mlua::Result<Option<Duration>> {
+    let Some(secs) = table.raw_get::<Option<f64>>(field)? else {
+        return Ok(None);
+    };
+    // Must be finite and positive: `Duration::from_secs_f64` panics on NaN,
+    // infinity, negative, or overflow.
+    if secs.is_finite() && secs > 0.0 {
+        return Ok(Some(Duration::from_secs_f64(secs)));
+    }
+    Err(invalid_input(
+        path,
+        format!("field `{field}` must be a positive number of seconds, got {secs}"),
+    ))
+}
+
+/// Options for `metactl.new_grpc_client(address[, opts])`, parsed from an
+/// optional Lua table. Every field is optional; omitted fields keep the
+/// defaults in [`GrpcClientOptions::default`]. Unknown fields are rejected.
+struct GrpcClientOptions {
+    username: String,
+    password: String,
+    timeout: Option<Duration>,
+    auto_sync_interval: Option<Duration>,
+    max_msg_size: usize,
+}
+
+impl Default for GrpcClientOptions {
+    fn default() -> Self {
+        Self {
+            username: "root".to_string(),
+            password: "xxx".to_string(),
+            timeout: Some(Duration::from_secs_f64(DEFAULT_CLIENT_TIMEOUT_SECS)),
+            auto_sync_interval: Some(Duration::from_secs(1)),
+            max_msg_size: DEFAULT_GRPC_MESSAGE_SIZE,
+        }
+    }
+}
+
+impl GrpcClientOptions {
+    const PATH: &'static str = "new_grpc_client options";
+    const FIELDS: &'static [&'static str] = &[
+        "username",
+        "password",
+        "timeout",
+        "auto_sync_interval",
+        "max_msg_size",
+    ];
+
+    /// Parse the optional Lua options table, layering provided fields over the
+    /// defaults.
+    fn from_lua(options: Option<Table>) -> mlua::Result<Self> {
+        let mut opts = Self::default();
+        let Some(table) = options else {
+            return Ok(opts);
+        };
+        validate_fields(&table, Self::PATH, Self::FIELDS)?;
+        if let Some(username) = table.raw_get::<Option<String>>("username")? {
+            opts.username = username;
+        }
+        if let Some(password) = table.raw_get::<Option<String>>("password")? {
+            opts.password = password;
+        }
+        if let Some(timeout) = read_duration_secs(&table, Self::PATH, "timeout")? {
+            opts.timeout = Some(timeout);
+        }
+        if let Some(interval) = read_duration_secs(&table, Self::PATH, "auto_sync_interval")? {
+            opts.auto_sync_interval = Some(interval);
+        }
+        if let Some(max_msg_size) = table.raw_get::<Option<usize>>("max_msg_size")? {
+            opts.max_msg_size = max_msg_size;
+        }
+        Ok(opts)
+    }
+
+    /// Create a gRPC client for `addresses` with these options.
+    fn create(
+        &self,
+        addresses: Vec<String>,
+    ) -> Result<Arc<ClientHandle<DatabendRuntime>>, CreationError> {
+        MetaGrpcClient::try_create(
+            addresses,
+            &self.username,
+            &self.password,
+            self.timeout,
+            self.auto_sync_interval,
+            None,
+            self.max_msg_size,
+        )
+    }
+}
+
 pub fn setup_lua_environment(lua: &Lua) -> anyhow::Result<()> {
     // Create metactl table to namespace all functions
     let metactl_table = lua
         .create_table()
         .map_err(|e| anyhow::anyhow!("Failed to create metactl table: {}", e))?;
 
-    // Register new_grpc_client function
+    // Register new_grpc_client function. The optional second argument is a
+    // table of client options (timeout, auto_sync_interval, username,
+    // password, max_msg_size); see GrpcClientOptions.
     let new_grpc_client = lua
-        .create_function(move |_lua, address: String| {
-            let client = MetaGrpcClient::try_create(
-                vec![address],
-                "root",
-                "xxx",
-                Some(Duration::from_secs(2)),
-                Some(Duration::from_secs(1)),
-                None,
-                DEFAULT_GRPC_MESSAGE_SIZE,
-            )
-            .map_err(|e| mlua::Error::external(format!("Failed to create gRPC client: {}", e)))?;
+        .create_function(move |_lua, (address, options): (String, Option<Table>)| {
+            let client = GrpcClientOptions::from_lua(options)?
+                .create(vec![address])
+                .map_err(|e| {
+                    mlua::Error::external(format!("Failed to create gRPC client: {}", e))
+                })?;
 
             Ok(LuaGrpcClient::new(client))
         })
@@ -505,15 +623,7 @@ pub fn new_grpc_client(
         "Using gRPC API address: {}",
         serde_json::to_string(&addresses).unwrap()
     );
-    MetaGrpcClient::try_create(
-        addresses,
-        "root",
-        "xxx",
-        Some(Duration::from_secs(2)),
-        Some(Duration::from_secs(1)),
-        None,
-        DEFAULT_GRPC_MESSAGE_SIZE,
-    )
+    GrpcClientOptions::default().create(addresses)
 }
 
 pub fn new_admin_client(addr: &str) -> MetaAdminClient {
